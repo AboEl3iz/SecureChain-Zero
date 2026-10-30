@@ -64,24 +64,43 @@ func BuildApkoImage(
 	apkArch string,
 	goArch string,
 ) (*dagger.File, *dagger.File, error) {
+	// 1. Build hermetic Wolfi base image using modern Chainguard apko
 	apkoContainer := client.Container().
-		From("ghcr.io/chainguard-dev/apko:v0.19.4").
+		From("cgr.dev/chainguard/apko:latest").
 		WithMountedDirectory("/work", src).
-		WithMountedFile("/work/bin/server", binary).
 		WithWorkdir("/work").
 		WithExec([]string{
 			"apko", "build",
 			"--log-level=info",
 			"--arch", apkArch,
-			"--sbom-formats=cyclonedx,spdx",
 			"build/apko.yaml",
 			"ghcr.io/myorg/secure-app:build-" + goArch,
-			"/out/image-" + goArch + ".tar",
-			"--sbom-path=/out/sbom-" + goArch,
+			"/out/base-" + goArch + ".tar",
 		})
 
-	imageFile := apkoContainer.File("/out/image-" + goArch + ".tar")
-	sbomFile := apkoContainer.File("/out/sbom-" + goArch + "/cyclonedx.json")
+	baseTar := apkoContainer.File("/out/base-" + goArch + ".tar")
 
-	return imageFile, sbomFile, nil
+	// 2. Inject compiled multi-arch Go binary into /app/server (non-root UID 65532)
+	finalContainer := client.Container(dagger.ContainerOpts{Platform: dagger.Platform("linux/" + goArch)}).
+		Import(baseTar).
+		WithFile("/app/server", binary, dagger.ContainerWithFileOpts{
+			Permissions: 0755,
+			Owner:       "65532:65532",
+		})
+
+	imageTar := finalContainer.AsTarball()
+
+	// 3. Generate CycloneDX SBOM via Syft for NIST & EO 14028 compliance
+	syftContainer := client.Container().
+		From("anchore/syft:v1.11.1").
+		WithMountedFile("/image.tar", imageTar).
+		WithExec([]string{
+			"syft", "scan",
+			"/image.tar",
+			"-o", "cyclonedx-json=/out/cyclonedx.json",
+		})
+
+	sbomFile := syftContainer.File("/out/cyclonedx.json")
+
+	return imageTar, sbomFile, nil
 }

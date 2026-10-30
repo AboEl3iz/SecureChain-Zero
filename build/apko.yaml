@@ -12,13 +12,6 @@ contents:
     # DO NOT ADD: bash, curl, wget, python, sh — no debugging tools in prod image
 
 # Application entrypoint (binary injected by Dagger pipeline)
-paths:
-  - source: bin/server
-    destination: /app/server
-    permissions: 0755
-    uid: 65532
-    gid: 65532
-
 entrypoint:
   command: /app/server
 
@@ -49,9 +42,3 @@ annotations:
 archs:
   - x86_64
   - aarch64
-
-# SBOM output configuration (EO 14028 §4 — machine-readable SBOM)
-sbom:
-  formats:
-    - cyclonedx-json        # Primary: CycloneDX 1.5
-    - spdx-json             # Secondary: SPDX 2.3

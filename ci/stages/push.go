@@ -37,7 +37,7 @@ func PushMultiArchImage(
 
 	// In hermetic CI, we publish the multi-arch image using crane
 	craneContainer := client.Container().
-		From("gcr.io/go-containerregistry/crane:v0.20.2").
+		From("cgr.dev/chainguard/crane:latest").
 		WithSecretVariable("REGISTRY_AUTH_TOKEN", registryToken).
 		WithEnvVariable("GITHUB_ACTOR", os.Getenv("GITHUB_ACTOR")).
 		WithMountedFile("/work/image-amd64.tar", builds[0].Image).

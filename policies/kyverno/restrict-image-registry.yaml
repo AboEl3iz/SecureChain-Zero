@@ -1,0 +1,29 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: "Restrict Container Image Registries"
+    policies.kyverno.io/description: >-
+      Restricts all container images deployed into production and staging namespaces
+      to the enterprise hardened private registry (ghcr.io/myorg/*). Prevents unauthorized
+      third-party or public registry image pulls (OWASP CICD-SEC-9).
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: allow-only-approved-registries
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+            namespaces: ["production", "staging"]
+      validate:
+        message: "Images must originate from the approved private registry (ghcr.io/myorg/*)."
+        pattern:
+          spec:
+            containers:
+              - image: "ghcr.io/myorg/*"
+            =(initContainers):
+              - image: "ghcr.io/myorg/*"
+            =(ephemeralContainers):
+              - image: "ghcr.io/myorg/*"

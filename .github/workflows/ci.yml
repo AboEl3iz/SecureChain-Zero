@@ -1,0 +1,23 @@
+# .github/workflows/ci.yml
+# NIST SSDF PS.2.1 & OWASP CICD-SEC-4 — Unprivileged caller workflow
+name: CI Trigger
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  call-builder:
+    # Restrict execution of signing builder to trusted main branch pushes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/builder.yml
+    with:
+      image-ref: "ghcr.io/${{ github.repository }}"
+    secrets: inherit

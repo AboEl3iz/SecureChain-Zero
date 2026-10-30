@@ -1,0 +1,32 @@
+# k8s/trivy-operator/values.yaml
+# Helm values for Aqua Security Trivy Operator continuous vulnerability intelligence
+
+operator:
+  scanJobsConcurrentLimit: 3
+  scanJobTimeout: 5m
+  metricsFinders: true
+
+trivy:
+  mode: Standalone
+  severity: "CRITICAL,HIGH"
+  ignoreUnfixed: false
+  slow: false
+  # Enable continuous CycloneDX SBOM generation for in-cluster workloads
+  generateSbom: true
+
+# Automated integration with OWASP Dependency-Track
+dependencyTrack:
+  enabled: true
+  url: "https://dt.internal.myorg.com"
+  syncInterval: "1h"
+
+# Exclude cluster infrastructure namespaces from high-frequency scan alerts
+targetNamespaces: "production,staging"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

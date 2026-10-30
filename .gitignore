@@ -1,0 +1,39 @@
+# Core dumps and temporary files
+core*
+*.core
+*.tmp
+*.log
+
+# Go binaries and build artifacts
+sample-app/bin/
+ci/bin/
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Secrets and environment files
+*.secret
+*.env
+*.pem
+*.key
+cosign.key
+*.sarif
+
+# Build outputs
+build/sbom/*.json
+!build/sbom/.gitkeep
+/out/
+*.tar
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+PythonNotesForProfessionals.pdf
+SecureChain-Zero_Master_Plan.md

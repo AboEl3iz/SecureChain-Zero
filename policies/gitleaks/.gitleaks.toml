@@ -1,0 +1,41 @@
+# Gitleaks Configuration (OWASP CICD-SEC-6)
+title = "SecureChain-Zero Secret Detection Policy"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlists for test files, doc examples, and public references"
+paths = [
+    '''(^|/)vendor/''',
+    '''(^|/)\.git/''',
+    '''(^|/)build/apko\.lock\.json$''',
+    '''(^|/)docs/''',
+    '''(^|/)vex/openvex\.json$'''
+]
+regexes = [
+    '''sha256:[a-f0-9]{64}''',
+    '''example[a-zA-Z0-9_\-]*'''
+]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic High-Entropy API Key"
+regex = '''(?i)(?:key|api|token|secret|password|auth)[0-9a-z\-_\t .]{0,20}['\"][0-9a-zA-Z]{32,45}['\"]'''
+entropy = 3.5
+secretGroup = 1
+
+[[rules]]
+id = "github-pat"
+description = "GitHub Personal Access Token"
+regex = '''ghp_[0-9a-zA-Z]{36}'''
+
+[[rules]]
+id = "github-fine-grained-pat"
+description = "GitHub Fine-Grained Personal Access Token"
+regex = '''github_pat_[0-9a-zA-Z_]{82}'''
+
+[[rules]]
+id = "private-key"
+description = "Private Key File Header"
+regex = '''(?i)-----BEGIN[ A-Z0-9_-]+PRIVATE KEY-----'''

@@ -1,0 +1,31 @@
+# .github/settings.yml
+# NIST SSDF PS.1.1 & OWASP CICD-SEC-1 — Repository and Branch Protection Policy
+repository:
+  name: SecureChain-Zero
+  private: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: false
+  delete_branch_on_merge: true
+
+branches:
+  - name: main
+    protection:
+      required_pull_request_reviews:
+        required_approving_review_count: 2
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+        require_last_push_approval: true
+      required_status_checks:
+        strict: true
+        contexts:
+          - "SLSA L3 Builder (Reusable) / build-and-sign"
+      enforce_admins: true
+      required_linear_history: true
+      allow_force_pushes: false
+      allow_deletions: false
+      required_conversation_resolution: true
+      required_signatures: true  # Gitsign / Sigstore commit signature enforcement

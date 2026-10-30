@@ -1,0 +1,49 @@
+{
+  "version": "v1",
+  "contents": {
+    "repositories": [
+      "https://packages.wolfi.dev/os"
+    ],
+    "keyring": [
+      "https://packages.wolfi.dev/os/wolfi-signing.rsa.pub"
+    ],
+    "packages": [
+      {
+        "name": "wolfi-base",
+        "version": "1:1.0-r8",
+        "architecture": "x86_64",
+        "digest": "sha256:d8c6b738e4a9e59d9c72e2ba9b841e05d0cb7d4881fa8f8a1a2b258596637e19"
+      },
+      {
+        "name": "ca-certificates-bundle",
+        "version": "20240203-r1",
+        "architecture": "x86_64",
+        "digest": "sha256:4f1a2394a40d5bd0f40d3a51fefce06259c77174620ec422ea7814b8dbfce5be"
+      },
+      {
+        "name": "tzdata",
+        "version": "2024a-r1",
+        "architecture": "x86_64",
+        "digest": "sha256:45da7a5ecda78efb919d7008cfbf6b1fb0e2ce1f364a27329971dbfa91176219"
+      },
+      {
+        "name": "wolfi-base",
+        "version": "1:1.0-r8",
+        "architecture": "aarch64",
+        "digest": "sha256:e6479b1836e523f663bc66d3a58e2bfd7b3ea14856b377b2586716a4d70df0e7"
+      },
+      {
+        "name": "ca-certificates-bundle",
+        "version": "20240203-r1",
+        "architecture": "aarch64",
+        "digest": "sha256:8ca5877f2403dc79bbfa7a810d7a049d5bf1c11d0bb0a7a2fa3c3298a83279bb"
+      },
+      {
+        "name": "tzdata",
+        "version": "2024a-r1",
+        "architecture": "aarch64",
+        "digest": "sha256:39fafe4177d44cfad554fbb86a241cb02cbe3823469ba1e04db1e8a9391d1796"
+      }
+    ]
+  }
+}

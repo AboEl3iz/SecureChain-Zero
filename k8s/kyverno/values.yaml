@@ -1,0 +1,54 @@
+# k8s/kyverno/values.yaml
+# Helm values for production Kyverno admission controller deployment
+
+replicaCount: 3
+
+admissionController:
+  replicas: 3
+  podDisruptionBudget:
+    minAvailable: 2
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  serviceMonitor:
+    enabled: true
+
+backgroundController:
+  enabled: true
+  replicas: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+cleanupController:
+  enabled: true
+  replicas: 1
+
+reportsController:
+  enabled: true
+  replicas: 2
+
+features:
+  sigstore:
+    enabled: true
+  logging:
+    verbosity: 2
+    format: json
+
+# Security context for Kyverno controllers
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

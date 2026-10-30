@@ -1,0 +1,45 @@
+rules:
+  - id: SC-BROTLI-001
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "github.com/andybalholm/brotli"
+              ...
+              brotli.NewReader(...)
+          - pattern: |
+              zlib.brotliDecompress(...)
+    message: >-
+      Brotli decompression is prohibited by security policy (CVE-2026-111497 mitigation).
+      Ensure only identity encoding is accepted.
+    languages: [go, javascript, typescript]
+    severity: ERROR
+
+  - id: SC-CMD-EXEC-001
+    patterns:
+      - pattern-either:
+          - pattern: exec.Command($CMD, ...)
+          - pattern: exec.CommandContext($CTX, $CMD, ...)
+    message: >-
+      Unrestricted external process execution detected. This violates the hermetic runtime
+      guarantee and increases RCE blast radius.
+    languages: [go]
+    severity: ERROR
+
+  - id: SC-HARDCODED-SECRET-001
+    patterns:
+      - pattern: $VAR = "...[0-9a-zA-Z]{32,}..."
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i)(password|secret|apikey|token|privatekey)
+    message: >-
+      Potential hardcoded credential or private token found in source code.
+    languages: [go, yaml, json]
+    severity: ERROR
+
+  - id: SC-PATH-TRAVERSAL-001
+    patterns:
+      - pattern: os.Open(filepath.Join($BASE, $INPUT))
+    message: >-
+      Potential path traversal. Use filepath.Clean and verify paths stay within expected jail.
+    languages: [go]
+    severity: WARNING

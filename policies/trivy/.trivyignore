@@ -1,0 +1,6 @@
+# Trivy Ignore Policy (OpenVEX Justified Exceptions)
+# Format: CVE-ID  # Justification / OpenVEX Ref
+
+# CVE-2026-111497: Brotli RCE - Not affected: HTTP server enforces Accept-Encoding: identity only
+# Reference: vex/openvex.json
+CVE-2026-111497

@@ -1,0 +1,50 @@
+# build/apko.yaml
+# NIST SSDF PS.1 — Minimal attack surface, no shell, non-root
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-base                    # Minimal glibc base
+    - ca-certificates-bundle        # TLS root CAs
+    - tzdata                        # Timezone data
+    # DO NOT ADD: bash, curl, wget, python, sh — no debugging tools in prod image
+
+# Application entrypoint (binary injected by Dagger pipeline)
+entrypoint:
+  command: /app/server
+
+# Hardened runtime accounts — NIST SSDF PS.1.1
+accounts:
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+      shell: /sbin/nologin
+      homedir: /home/nonroot
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  run-as: 65532
+
+# Environment configuration
+environment:
+  GOTRACEBACK: none          # No stack traces leaked in production
+  CGO_ENABLED: "0"
+
+# OCI image annotations (EO 14028 traceability)
+annotations:
+  org.opencontainers.image.source: "https://github.com/myorg/SecureChain-Zero"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+# Multi-architecture builds
+archs:
+  - x86_64
+  - aarch64
+
+# SBOM output configuration (EO 14028 §4 — machine-readable SBOM)
+sbom:
+  formats:
+    - cyclonedx-json        # Primary: CycloneDX 1.5
+    - spdx-json             # Secondary: SPDX 2.3

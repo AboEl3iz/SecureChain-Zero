@@ -1,0 +1,65 @@
+# k8s/tetragon/tracing-policy.yaml
+# NIST SSDF RV.2 — Runtime detection of Node2Shell-class RCE attempts.
+# Detects: any process inside our app container calling execve() on a shell
+# or external binary. Legitimate app binary is /app/server ONLY.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: detect-rce-execve-from-app
+  namespace: production             # Scope policy to production namespace
+spec:
+  kprobes:
+    # ── Detect external binary execution (shell spawn / RCE) ─────────────────
+    # FIX: Use matchArgs with Prefix operator on the first execve argument
+    # (the binary path). This catches execve("/bin/sh"), execve("/bin/bash"),
+    # execve("/usr/bin/python3"), etc. — the classic RCE post-exploitation chain.
+    - call: "sys_execve"
+      syscall: true
+      args:
+        - index: 0
+          type: "string"           # First arg = pathname of the binary
+      selectors:
+        - matchArgs:
+            - index: 0
+              operator: "Prefix"   # Matches any binary under /bin/ or /usr/bin/
+              values:
+                - "/bin/"
+                - "/usr/bin/"
+                - "/usr/local/bin/"
+                - "/sbin/"
+          matchActions:
+            - action: Sigkill      # Immediate SIGKILL — no warning, no delay
+            - action: Post         # Send event to Tetragon log / Falco / SIEM
+              rateLimit: "5/second"
+
+    # ── Detect writes outside /tmp (payload drop attempt) ────────────────────
+    # Any write to /proc, /sys, or /dev from the app process is highly anomalous.
+    - call: "sys_openat"
+      syscall: true
+      args:
+        - index: 1
+          type: "string"           # Pathname argument to openat
+      selectors:
+        - matchArgs:
+            - index: 1
+              operator: "Prefix"
+              values:
+                - "/proc/"
+                - "/sys/"
+                - "/dev/"
+          matchActions:
+            - action: Post
+              rateLimit: "10/second"
+
+    # ── Detect unexpected outbound socket connections (C2 callback) ───────────
+    # After a Distroless RCE, the attacker tries to dial out to a C2 server.
+    # Our NetworkPolicy blocks this at L3/L4, but Tetragon catches it at L7 (syscall).
+    - call: "sys_connect"
+      syscall: true
+      args:
+        - index: 0
+          type: "sock_addr"
+      selectors:
+        - matchActions:
+            - action: Post
+              rateLimit: "10/minute"

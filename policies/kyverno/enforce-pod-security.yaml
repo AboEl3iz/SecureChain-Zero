@@ -1,0 +1,90 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-pod-security-hardening
+  annotations:
+    # NIST SSDF PS.1.1 + OWASP Docker Top 10 D05, D06
+    policies.kyverno.io/title: "Pod Security Hardening"
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: require-nonroot-nonroot-uid
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+            namespaces: ["production", "staging"]
+      validate:
+        message: "Containers MUST run as UID 65532 (nonroot). No exceptions."
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65532
+              runAsGroup: 65532
+            containers:
+              - securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 65532
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop: ["ALL"]
+                  seccompProfile:
+                    type: RuntimeDefault   # Or Localhost for custom seccomp profiles
+
+    - name: require-tmp-emptydir-for-readonly-rootfs
+      # FIX: readOnlyRootFilesystem=true blocks all writes including /tmp.
+      # Go apps (and many libraries: TLS cert caching, multipart uploads, etc.)
+      # need a writable /tmp. The solution is an emptyDir volume in RAM —
+      # the root FS stays read-only while /tmp is a kernel memory-backed tmpfs.
+      # This policy ENFORCES that the emptyDir is present whenever readOnly is set.
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+            namespaces: ["production", "staging"]
+      validate:
+        message: >-
+          Pods with readOnlyRootFilesystem=true MUST mount an emptyDir (medium: Memory)
+          at /tmp to allow Go runtime and library temp file access without weakening
+          the read-only root filesystem guarantee.
+        pattern:
+          spec:
+            volumes:
+              - name: tmp-dir
+                emptyDir:
+                  medium: Memory
+                  sizeLimit: "?*"   # Must declare a sizeLimit to prevent OOM
+            containers:
+              - volumeMounts:
+                  - name: tmp-dir
+                    mountPath: /tmp
+
+    - name: require-resource-limits
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+      validate:
+        message: "All containers must specify CPU and memory limits."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
+
+    - name: disallow-host-namespaces
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+      validate:
+        message: "Host namespaces (PID, IPC, Network) are not allowed."
+        pattern:
+          spec:
+            =(hostPID): false
+            =(hostIPC): false
+            =(hostNetwork): false

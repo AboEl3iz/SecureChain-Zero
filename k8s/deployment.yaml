@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-app
+  namespace: production
+  labels:
+    app: secure-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: secure-app
+  template:
+    metadata:
+      labels:
+        app: secure-app
+    spec:
+      # NIST SSDF PS.1.1 + Kyverno enforce-pod-security-hardening compliance
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: secure-app
+          image: ghcr.io/myorg/secure-app:latest  # Mutated to immutable digest by Kyverno
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: PORT
+              value: "8080"
+            - name: APP_ENV
+              value: "production"
+          securityContext:
+            readOnlyRootFilesystem: true           # Root filesystem is strictly read-only
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp-dir
+              mountPath: /tmp                      # Dedicated memory tmpfs for temp files
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+      volumes:
+        - name: tmp-dir
+          emptyDir:
+            medium: Memory    # In-RAM tmpfs — survives no restarts, leaves zero disk trace
+            sizeLimit: 64Mi   # Cap memory usage to prevent node OOM
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secure-app-service
+  namespace: production
+  labels:
+    app: secure-app
+spec:
+  type: ClusterIP
+  selector:
+    app: secure-app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

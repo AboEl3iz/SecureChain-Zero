@@ -1,0 +1,75 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-supply-chain-trust
+  annotations:
+    # NIST SSDF PS.3.2 — Non-bypassable production gate
+    policies.kyverno.io/title: "Supply Chain Trust Enforcement"
+    policies.kyverno.io/description: >
+      Rejects any Pod whose image lacks a valid Cosign signature from the
+      organization's trusted GitHub Actions reusable workflow (OIDC-bound),
+      a valid SLSA provenance attestation, and a signed CycloneDX SBOM.
+      Implements NIST SSDF PS.3.2, SLSA v1.2 L3, and EO 14028 §4.
+spec:
+  validationFailureAction: Enforce    # Hard block — no exceptions without explicit exemption
+  background: true
+  rules:
+
+    - name: verify-cosign-signature-and-slsa-provenance
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+            namespaces: ["production", "staging"]
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/myorg/*"
+          skipImageReferences:
+            - "ghcr.io/myorg/debug-*"   # Explicit exemption namespace
+          mutateDigest: true             # Replace tag with digest (immutability)
+          required: true
+          attestors:
+            - entries:
+                - keyless:
+                    issuer: "https://token.actions.githubusercontent.com"
+                    # Pins signing identity to EXACTLY our trusted reusable workflow
+                    subject: "https://github.com/myorg/SecureChain-Zero/.github/workflows/builder.yml@refs/heads/main"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"
+                      ignoreTlog: false    # Transparency log MUST be checked
+          attestations:
+            # Verify SLSA Provenance attestation
+            - type: https://slsa.dev/provenance/v1
+              attestors:
+                - entries:
+                    - keyless:
+                        issuer: "https://token.actions.githubusercontent.com"
+                        subject: "https://github.com/myorg/SecureChain-Zero/.github/workflows/builder.yml@refs/heads/main"
+              conditions:
+                - all:
+                  # The build was triggered from our protected main branch
+                  - key: "{{ predicate.buildDefinition.externalParameters.workflow.ref }}"
+                    operator: Equals
+                    value: "refs/heads/main"
+                  # The builder is the official GitHub Actions builder
+                  - key: "{{ predicate.runDetails.builder.id }}"
+                    operator: Contains
+                    value: "https://github.com/actions/runner"
+
+            # Verify CycloneDX SBOM attestation (EO 14028 §4)
+            - type: https://cyclonedx.org/bom
+              attestors:
+                - entries:
+                    - keyless:
+                        issuer: "https://token.actions.githubusercontent.com"
+                        subject: "https://github.com/myorg/SecureChain-Zero/.github/workflows/builder.yml@refs/heads/main"
+              conditions:
+                - all:
+                  # SBOM must contain at least one component (not empty)
+                  - key: "{{ length(predicate.components) }}"
+                    operator: GreaterThan
+                    value: 0
+                  # SBOM format version must be CycloneDX 1.5 or newer
+                  - key: "{{ predicate.specVersion }}"
+                    operator: GreaterThanOrEquals
+                    value: "1.5"

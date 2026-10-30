@@ -40,8 +40,8 @@ func PushMultiArchImage(
 		From("cgr.dev/chainguard/crane:latest").
 		WithSecretVariable("REGISTRY_AUTH_TOKEN", registryToken).
 		WithEnvVariable("GITHUB_ACTOR", os.Getenv("GITHUB_ACTOR")).
-		WithMountedFile("/work/image-amd64.tar", builds[0].Image).
-		WithMountedFile("/work/image-arm64.tar", builds[1].Image)
+		WithMountedFile("/tmp/image-amd64.tar", builds[0].Image).
+		WithMountedFile("/tmp/image-arm64.tar", builds[1].Image)
 
 	// Authenticate to registry if credentials are provided
 	rawToken := os.Getenv("REGISTRY_TOKEN")
@@ -63,8 +63,8 @@ func PushMultiArchImage(
 	}
 
 	craneContainer = craneContainer.
-		WithExec([]string{"crane", "push", "/work/image-amd64.tar", amd64Ref}).
-		WithExec([]string{"crane", "push", "/work/image-arm64.tar", arm64Ref})
+		WithExec([]string{"crane", "push", "/tmp/image-amd64.tar", amd64Ref}).
+		WithExec([]string{"crane", "push", "/tmp/image-arm64.tar", arm64Ref})
 
 	// Create multi-arch index
 	digestOut, err := craneContainer.

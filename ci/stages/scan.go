@@ -23,8 +23,7 @@ func RunVulnScan(
 			"--input", "/image.tar",
 			"--severity", "CRITICAL",
 			"--exit-code", "1", // Fail pipeline on CRITICAL CVE
-			"--format", "sarif",
-			"--output", "/tmp/trivy.sarif",
+			"--format", "table",
 			"--ignorefile", "/src/policies/trivy/.trivyignore",
 		}).
 		Sync(ctx)

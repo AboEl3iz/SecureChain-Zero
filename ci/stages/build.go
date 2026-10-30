@@ -37,7 +37,7 @@ func BuildMultiArchBinaries(
 		WithEnvVariable("GOOS", "linux")
 
 	for _, t := range targets {
-		outPath := fmt.Sprintf("/out/server-%s", t.GoArch)
+		outPath := fmt.Sprintf("/tmp/server-%s", t.GoArch)
 		bin := goBuilder.
 			WithEnvVariable("GOARCH", t.GoArch).
 			WithExec([]string{
@@ -64,6 +64,8 @@ func BuildApkoImage(
 	apkArch string,
 	goArch string,
 ) (*dagger.File, *dagger.File, error) {
+	outTar := fmt.Sprintf("/tmp/base-%s.tar", goArch)
+
 	// 1. Build hermetic Wolfi base image using modern Chainguard apko
 	apkoContainer := client.Container().
 		From("cgr.dev/chainguard/apko:latest").
@@ -75,10 +77,10 @@ func BuildApkoImage(
 			"--arch", apkArch,
 			"build/apko.yaml",
 			"ghcr.io/myorg/secure-app:build-" + goArch,
-			"/out/base-" + goArch + ".tar",
+			outTar,
 		})
 
-	baseTar := apkoContainer.File("/out/base-" + goArch + ".tar")
+	baseTar := apkoContainer.File(outTar)
 
 	// 2. Inject compiled multi-arch Go binary into /app/server (non-root UID 65532)
 	finalContainer := client.Container(dagger.ContainerOpts{Platform: dagger.Platform("linux/" + goArch)}).
@@ -97,10 +99,10 @@ func BuildApkoImage(
 		WithExec([]string{
 			"syft", "scan",
 			"/image.tar",
-			"-o", "cyclonedx-json=/out/cyclonedx.json",
+			"-o", "cyclonedx-json=/tmp/cyclonedx.json",
 		})
 
-	sbomFile := syftContainer.File("/out/cyclonedx.json")
+	sbomFile := syftContainer.File("/tmp/cyclonedx.json")
 
 	return imageTar, sbomFile, nil
 }

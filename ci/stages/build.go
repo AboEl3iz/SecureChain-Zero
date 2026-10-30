@@ -30,7 +30,7 @@ func BuildMultiArchBinaries(
 	binaries := make(map[string]*dagger.File)
 
 	goBuilder := client.Container().
-		From("golang:1.23.4-alpine").
+		From("golang:alpine").
 		WithMountedDirectory("/src", src).
 		WithWorkdir("/src/sample-app").
 		WithEnvVariable("CGO_ENABLED", "0").

@@ -4,3 +4,7 @@
 # CVE-2026-111497: Brotli RCE - Not affected: HTTP server enforces Accept-Encoding: identity only
 # Reference: vex/openvex.json
 CVE-2026-111497
+
+# CVE-2025-68121: Go crypto/tls session resumption - Not affected: HTTP server behind ingress TLS terminator
+# Reference: vex/openvex.json
+CVE-2025-68121

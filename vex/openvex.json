@@ -27,6 +27,22 @@
       "impact_statement": "HTTP server is configured with `Accept-Encoding: identity` only. The Brotli decompression path (zlib.brotliDecompress) is never invoked in the request handling lifecycle. Verified via static analysis with Semgrep rule SC-BROTLI-001.",
       "action_statement": "Monitor upstream Node.js advisory for patch availability. Update apko.yaml when nodejs >= 22.5.1 is available in Wolfi.",
       "action_statement_timestamp": "2026-10-29T15:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "@id": "https://osv.dev/CVE-2025-68121",
+        "name": "CVE-2025-68121",
+        "description": "crypto/tls: Incorrect certificate validation during TLS session resumption"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.23.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Application serves unencrypted HTTP behind an external ingress TLS terminator and does not configure or execute TLS session resumption.",
+      "action_statement": "Upgraded base compiler to golang:alpine and patched Go runtime."
     }
   ]
 }

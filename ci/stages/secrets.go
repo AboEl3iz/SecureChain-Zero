@@ -15,12 +15,11 @@ func RunSecretScan(ctx context.Context, client *dagger.Client, src *dagger.Direc
 		WithWorkdir("/src").
 		WithExec([]string{
 			"gitleaks", "dir",
-			"--no-git",
-			"--exit-code=1",
 			"--config=/src/policies/gitleaks/.gitleaks.toml",
 			"--report-format=sarif",
 			"--report-path=/tmp/gitleaks.sarif",
 			"--verbose",
+			"/src",
 		}).
 		Stdout(ctx)
 

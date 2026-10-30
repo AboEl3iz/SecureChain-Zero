@@ -12,6 +12,13 @@ contents:
     # DO NOT ADD: bash, curl, wget, python, sh — no debugging tools in prod image
 
 # Application entrypoint (binary injected by Dagger pipeline)
+paths:
+  - source: bin/server
+    destination: /app/server
+    permissions: 0755
+    uid: 65532
+    gid: 65532
+
 entrypoint:
   command: /app/server
 

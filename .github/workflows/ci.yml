@@ -23,4 +23,5 @@ jobs:
     uses: ./.github/workflows/builder.yml
     with:
       image-ref: "ghcr.io/${{ github.repository }}"
-    secrets: inherit
+    secrets:
+      DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}

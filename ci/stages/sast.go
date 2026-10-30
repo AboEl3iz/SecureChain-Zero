@@ -17,8 +17,7 @@ func RunSASTScan(ctx context.Context, client *dagger.Client, src *dagger.Directo
 			"semgrep",
 			"--config=/src/policies/semgrep/.semgrep.yaml",
 			"--config=auto",
-			"--sarif",
-			"--output=/tmp/semgrep.sarif",
+			"--sarif-output=/tmp/semgrep.sarif",
 			"--severity=ERROR",
 			"--error", // Exit non-zero on findings
 		}).

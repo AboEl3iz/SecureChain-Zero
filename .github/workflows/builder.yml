@@ -10,6 +10,10 @@ on:
         required: true
         type: string
 
+    secrets:
+      DAGGER_CLOUD_TOKEN:
+        required: false
+
 permissions:
   id-token: write      # Required: GitHub OIDC token for keyless signing
   contents: read
@@ -55,18 +59,20 @@ jobs:
         # NIST SSDF PS.3 + SLSA L3: signing identity bound to THIS workflow's OIDC claim
         env:
           COSIGN_EXPERIMENTAL: "1"
+          IMAGE_REF: ${{ inputs.image-ref }}
+          IMAGE_DIGEST: ${{ steps.pipeline.outputs.image-digest }}
         run: |
-          IMAGE_DIGEST="${{ steps.pipeline.outputs.image-digest }}"
           cosign sign --yes \
             --oidc-issuer="https://token.actions.githubusercontent.com" \
-            "${{ inputs.image-ref }}@${IMAGE_DIGEST}"
+            "${IMAGE_REF}@${IMAGE_DIGEST}"
 
       - name: Attest CycloneDX SBOM (EO 14028 §4)
         env:
           COSIGN_EXPERIMENTAL: "1"
+          IMAGE_REF: ${{ inputs.image-ref }}
+          IMAGE_DIGEST: ${{ steps.pipeline.outputs.image-digest }}
+          SBOM_PATH: ${{ steps.pipeline.outputs.sbom-path }}
         run: |
-          IMAGE_DIGEST="${{ steps.pipeline.outputs.image-digest }}"
-          SBOM_PATH="${{ steps.pipeline.outputs.sbom-path }}"
           if [ ! -f "${SBOM_PATH}" ]; then
             mkdir -p "$(dirname "${SBOM_PATH}")"
             echo '{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[{"type":"application","name":"secure-app","version":"1.0.0"}]}' > "${SBOM_PATH}"
@@ -74,17 +80,18 @@ jobs:
           cosign attest --yes \
             --predicate="${SBOM_PATH}" \
             --type=cyclonedx \
-            "${{ inputs.image-ref }}@${IMAGE_DIGEST}"
+            "${IMAGE_REF}@${IMAGE_DIGEST}"
 
       - name: Attest OpenVEX (NIST SSDF RV.1.3)
         env:
           COSIGN_EXPERIMENTAL: "1"
+          IMAGE_REF: ${{ inputs.image-ref }}
+          IMAGE_DIGEST: ${{ steps.pipeline.outputs.image-digest }}
         run: |
-          IMAGE_DIGEST="${{ steps.pipeline.outputs.image-digest }}"
           cosign attest --yes \
             --predicate=vex/openvex.json \
             --type=openvex \
-            "${{ inputs.image-ref }}@${IMAGE_DIGEST}"
+            "${IMAGE_REF}@${IMAGE_DIGEST}"
 
       - name: Generate SLSA Provenance Attestation
         # SLSA v1.2 Level 3 — Non-forgeable provenance via GitHub OIDC
@@ -95,10 +102,14 @@ jobs:
           push-to-registry: true
 
       - name: Verify Full Attestation Chain
+        env:
+          IMAGE_REF: ${{ inputs.image-ref }}
+          IMAGE_DIGEST: ${{ steps.pipeline.outputs.image-digest }}
+          REPO: ${{ github.repository }}
         run: |
-          IMAGE="${{ inputs.image-ref }}@${{ steps.pipeline.outputs.image-digest }}"
+          IMAGE="${IMAGE_REF}@${IMAGE_DIGEST}"
           cosign verify \
-            --certificate-identity-regexp="https://github.com/${{ github.repository }}/.github/workflows/builder.yml" \
+            --certificate-identity-regexp="https://github.com/${REPO}/.github/workflows/builder.yml" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
             "$IMAGE"
           echo "✅ Full attestation chain verified successfully"

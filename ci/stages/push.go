@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -43,13 +44,25 @@ func PushMultiArchImage(
 		WithMountedFile("/work/image-arm64.tar", builds[1].Image)
 
 	// Authenticate to registry if credentials are provided
+	rawToken := os.Getenv("REGISTRY_TOKEN")
+	actor := os.Getenv("GITHUB_ACTOR")
+	if actor == "" {
+		actor = "token"
+	}
+	regParts := strings.Split(registry, "/")
+	regHost := regParts[0]
+
+	if rawToken != "" {
+		authString := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", actor, rawToken)))
+		dockerConfig := fmt.Sprintf(`{"auths":{"%s":{"auth":"%s"}}}`, regHost, authString)
+		dockerConfigSecret := client.SetSecret("docker-config", dockerConfig)
+
+		craneContainer = craneContainer.
+			WithEnvVariable("DOCKER_CONFIG", "/root/.docker").
+			WithMountedSecret("/root/.docker/config.json", dockerConfigSecret)
+	}
+
 	craneContainer = craneContainer.
-		WithExec([]string{"sh", "-c", `
-			if [ -n "$REGISTRY_AUTH_TOKEN" ]; then
-				ACTOR="${GITHUB_ACTOR:-token}"
-				echo "$REGISTRY_AUTH_TOKEN" | crane auth login ghcr.io -u "$ACTOR" --password-stdin 2>/dev/null || true
-			fi
-		`}).
 		WithExec([]string{"crane", "push", "/work/image-amd64.tar", amd64Ref}).
 		WithExec([]string{"crane", "push", "/work/image-arm64.tar", arm64Ref})
 

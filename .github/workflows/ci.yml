@@ -11,7 +11,10 @@ on:
       - main
 
 permissions:
-  contents: read
+  id-token: write      # Required: OIDC token for keyless Cosign and SLSA provenance
+  contents: read       # Required: repository checkout
+  attestations: write  # Required: GitHub SLSA provenance attestation
+  packages: write      # Required: push container images and attestations to GHCR
 
 jobs:
   call-builder:

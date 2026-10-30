@@ -19,7 +19,6 @@ Modern software supply chains are increasingly targeted at **build time**, rathe
 | **Log4Shell (2021)** | Vulnerable transitive dependencies lurking in images | Automated CycloneDX SBOM + Continuous Dependency-Track scanning |
 | **XZ Utils (2024)** | Malicious maintainer compromising upstream builds | Bit-for-bit reproducible apko builds + digest pinning via `apko.lock.json` |
 | **Node2Shell (2026)** | Zero-day RCE via native libraries | Shell-less Wolfi base + readOnlyRootFS + Tetragon eBPF SIGKILL |
-
 ---
 
 ## 2. Architecture & Pipeline Flow

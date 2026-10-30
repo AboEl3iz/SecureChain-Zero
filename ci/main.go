@@ -21,6 +21,15 @@ func main() {
 }
 
 func RunPipeline(ctx context.Context) error {
+	// Ensure we operate from repository root so Host().Directory(".") mounts all project files
+	if _, err := os.Stat("sample-app"); err != nil {
+		if _, err := os.Stat("../sample-app"); err == nil {
+			if err := os.Chdir(".."); err != nil {
+				return fmt.Errorf("chdir to repository root: %w", err)
+			}
+		}
+	}
+
 	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stderr))
 	if err != nil {
 		return fmt.Errorf("dagger connect: %w", err)

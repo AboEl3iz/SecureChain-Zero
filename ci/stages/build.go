@@ -94,8 +94,10 @@ func BuildApkoImage(
 
 	// 3. Generate CycloneDX SBOM via Syft for NIST & EO 14028 compliance
 	syftContainer := client.Container().
-		From("anchore/syft:v1.11.1").
-		WithMountedFile("/image.tar", imageTar).
+		From("cgr.dev/chainguard/syft:latest").
+		WithMountedFile("/image.tar", imageTar, dagger.ContainerWithMountedFileOpts{
+			Owner: "65532:65532",
+		}).
 		WithExec([]string{
 			"syft", "scan",
 			"/image.tar",

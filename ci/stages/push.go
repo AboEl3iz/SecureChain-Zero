@@ -26,6 +26,8 @@ func PushMultiArchImage(
 	if registry == "" {
 		registry = "ghcr.io/myorg/secure-app"
 	}
+	registry = strings.ToLower(strings.TrimSpace(registry))
+
 	tag := os.Getenv("IMAGE_TAG")
 	if tag == "" {
 		tag = "latest"
@@ -40,8 +42,12 @@ func PushMultiArchImage(
 		From("cgr.dev/chainguard/crane:latest").
 		WithSecretVariable("REGISTRY_AUTH_TOKEN", registryToken).
 		WithEnvVariable("GITHUB_ACTOR", os.Getenv("GITHUB_ACTOR")).
-		WithMountedFile("/tmp/image-amd64.tar", builds[0].Image).
-		WithMountedFile("/tmp/image-arm64.tar", builds[1].Image)
+		WithMountedFile("/tmp/image-amd64.tar", builds[0].Image, dagger.ContainerWithMountedFileOpts{
+			Owner: "65532:65532",
+		}).
+		WithMountedFile("/tmp/image-arm64.tar", builds[1].Image, dagger.ContainerWithMountedFileOpts{
+			Owner: "65532:65532",
+		})
 
 	// Authenticate to registry if credentials are provided
 	rawToken := os.Getenv("REGISTRY_TOKEN")
@@ -58,8 +64,11 @@ func PushMultiArchImage(
 		dockerConfigSecret := client.SetSecret("docker-config", dockerConfig)
 
 		craneContainer = craneContainer.
-			WithEnvVariable("DOCKER_CONFIG", "/root/.docker").
-			WithMountedSecret("/root/.docker/config.json", dockerConfigSecret)
+			WithEnvVariable("DOCKER_CONFIG", "/tmp/.docker").
+			WithMountedSecret("/tmp/.docker/config.json", dockerConfigSecret, dagger.ContainerWithMountedSecretOpts{
+				Owner: "65532:65532",
+				Mode:  0600,
+			})
 	}
 
 	craneContainer = craneContainer.
@@ -78,9 +87,12 @@ func PushMultiArchImage(
 		Stdout(ctx)
 
 	if err != nil {
-		// If registry credentials are not provided (e.g. local dry-run without push),
-		// return a deterministic placeholder digest for local stage testing.
-		return "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "build/sbom/cyclonedx.json", nil
+		if rawToken == "" {
+			// If registry credentials are not provided (e.g. local dry-run without push),
+			// return a deterministic placeholder digest for local stage testing.
+			return "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "build/sbom/cyclonedx.json", nil
+		}
+		return "", "", fmt.Errorf("crane push multi-arch image: %w", err)
 	}
 
 	return strings.TrimSpace(digestOut), "build/sbom/cyclonedx.json", nil

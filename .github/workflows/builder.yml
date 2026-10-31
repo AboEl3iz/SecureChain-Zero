@@ -62,6 +62,13 @@ jobs:
           echo "image-digest=$(cat /tmp/image-digest.txt)" >> "$GITHUB_OUTPUT"
           echo "sbom-path=$(cat /tmp/sbom-path.txt)"       >> "$GITHUB_OUTPUT"
 
+      - name: Authenticate Cosign to GHCR
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "${REGISTRY_TOKEN}" | cosign login ghcr.io -u "${ACTOR}" --password-stdin
+
       # Step runs directly on the runner — full OIDC token access (SLSA L3)
       - name: Sign Image (Cosign Keyless — OIDC)
         # NIST SSDF PS.3 + SLSA L3: signing identity bound to THIS workflow's OIDC claim

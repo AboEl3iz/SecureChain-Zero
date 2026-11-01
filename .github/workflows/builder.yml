@@ -121,23 +121,28 @@ jobs:
           IMAGE_REF: ${{ steps.normalize.outputs.image-ref }}
           IMAGE_DIGEST: ${{ steps.pipeline.outputs.image-digest }}
           REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           IMAGE="${IMAGE_REF}@${IMAGE_DIGEST}"
-          echo "==> Verifying image signature"
+          echo "==> 1. Verifying container image signature (Cosign Keyless)"
           cosign verify \
             --certificate-identity-regexp="(?i)https://github.com/${REPO}/.github/workflows/builder.yml" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
             "$IMAGE"
-          echo "==> Verifying CycloneDX SBOM attestation"
-          cosign verify-attestation \
-            --type cyclonedx \
-            --certificate-identity-regexp="(?i)https://github.com/${REPO}/.github/workflows/builder.yml" \
-            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            "$IMAGE"
-          echo "==> Verifying OpenVEX attestation"
-          cosign verify-attestation \
-            --type openvex \
-            --certificate-identity-regexp="(?i)https://github.com/${REPO}/.github/workflows/builder.yml" \
-            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            "$IMAGE"
-          echo "✅ Full attestation chain verified successfully"
+
+          echo "==> 2. Verifying SLSA v1.2 Build Provenance attestation"
+          gh attestation verify "oci://${IMAGE}" \
+            --repo "${REPO}" \
+            --predicate-type "https://slsa.dev/provenance/v1"
+
+          echo "==> 3. Verifying CycloneDX SBOM attestation (EO 14028 §4)"
+          gh attestation verify "oci://${IMAGE}" \
+            --repo "${REPO}" \
+            --predicate-type "https://cyclonedx.org/bom"
+
+          echo "==> 4. Verifying OpenVEX justification attestation (NIST SSDF RV.1.3)"
+          gh attestation verify "oci://${IMAGE}" \
+            --repo "${REPO}" \
+            --predicate-type "https://openvex.dev/ns"
+
+          echo "✅ Full supply chain attestation chain verified successfully!"
